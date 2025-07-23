@@ -1,0 +1,256 @@
+{% extends "base.html" %} {% block content %}
+<a href="/register"><h1>建立帳戶</h1></a>
+<a href="/courses"><h1>課程管理</h1></a>
+
+<h1>課程清單</h1>
+<div id="course-area"></div>
+<table id="course-table" style="display: none;">
+    <thead>
+        <tr>
+        <th>課程名稱</th>
+        <th>星期</th>
+        <th>開始時間</th>
+        <th>結束時間</th>
+        <th>描述</th>
+        <th>地點</th>
+        <th>教師姓名</th>
+        <th>教師 Email</th>
+        </tr>
+    </thead>
+    <tbody id="course-table-body">
+        <!-- JavaScript 將會插入資料 -->
+    </tbody>
+</table>
+<h1>教師列表</h1>
+<div id="teacher-area"></div>
+<table id="teacher-table" style="display: none;">
+    <thead>
+        <tr>
+        <th>教師姓名</th>
+        <th>教師 Email</th>
+        <th>授課課程</th>
+        </tr>
+    </thead>
+    <tbody id="teacher-table-body">
+        <!-- JavaScript 將會插入資料 -->
+    </tbody>
+</table>
+<h1>特定教師之授課列表</h1>
+<div id="search-area">
+  <input type="text" id="search-input" placeholder="請輸入講師名稱">
+  <button id="search-teacher">查詢</button>
+</div>
+<table id="search-table" style="display: none;">
+  <thead>
+    <tr>
+      <th>課程名稱</th>
+      <th>星期</th>
+      <th>開始時間</th>
+      <th>結束時間</th>
+      <th>描述</th>
+      <th>地點</th>
+    </tr>
+  </thead>
+  <tbody id="search-table-body">
+    <!-- JavaScript 將會插入資料 -->
+  </tbody>
+</table>
+
+
+<script>
+    const weekdayMap = {
+      "1": "星期一",
+      "2": "星期二",
+      "3": "星期三",
+      "4": "星期四",
+      "5": "星期五",
+      "6": "星期六",
+      "7": "星期日"
+    };
+
+    function formatTime(timeStr) {
+      if (typeof timeStr === "string" && timeStr.length === 4) {
+        return timeStr.slice(0, 2) + ":" + timeStr.slice(2);
+      }
+      return timeStr;
+    }
+
+    async function loadCourses() {
+      const courseArea = document.getElementById('course-area');
+      const tbody = document.getElementById('course-table-body');
+      const table = document.getElementById('course-table');
+
+      // 清空
+      tbody.textContent = '';
+
+      try {
+        const response = await fetch('/api/courses');
+        if (!response.ok) throw new Error('取得課程失敗');
+
+        const coursesObj = await response.json();
+        const courses = Object.values(coursesObj);
+
+        if (courses.length === 0) {
+          const p = document.createElement('p');
+          p.textContent = '目前沒有課程。';
+          table.style.display = 'none';
+          return;
+        }
+
+        table.style.display = 'table';
+
+        courses.forEach(course => {
+
+          // 表格列
+          const tr = document.createElement('tr');
+          const tdValues = [
+            course.course_name,
+            weekdayMap[course.weekday] || course.weekday,
+            formatTime(course.start),
+            formatTime(course.end),
+            course.description,
+            course.location,
+            course.teachers?.[0]?.name || '',
+            course.teachers?.[0]?.email || ''
+          ];
+
+          tdValues.forEach(value => {
+            const td = document.createElement('td');
+            td.textContent = value;
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+
+      } catch (err) {
+        console.error(err);
+        const p = document.createElement('p');
+        p.textContent = '無法載入課程。';
+        courseArea.appendChild(p);
+        table.style.display = 'none';
+      }
+    }
+    async function loadTeachers() {
+      const teacherTbody = document.getElementById('teacher-table-body');
+      const teacherTable = document.getElementById('teacher-table');
+
+      teacherTbody.textContent = '';
+      teacherTable.style.display = 'none';
+
+      try {
+        const response = await fetch('/api/teachers/courses');
+        if (!response.ok) throw new Error('取得教師失敗');
+
+        const teachersObj = await response.json();
+        const teachers = Object.values(teachersObj);
+
+        if (teachers.length === 0) return;
+
+        teacherTable.style.display = 'table';
+
+        teachers.forEach(teacher => {
+          const tr = document.createElement('tr');
+
+          const nameTd = document.createElement('td');
+          nameTd.textContent = teacher.teacher_name;
+
+          const emailTd = document.createElement('td');
+          emailTd.textContent = teacher.teacher_email;
+
+          const courseList = (teacher.courses || []).map(c => c.name).join(', ');
+          const coursesTd = document.createElement('td');
+          coursesTd.textContent = courseList;
+
+          tr.appendChild(nameTd);
+          tr.appendChild(emailTd);
+          tr.appendChild(coursesTd);
+
+          teacherTbody.appendChild(tr);
+        });
+
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+
+    document.getElementById('search-teacher').addEventListener('click', onSearchClick);
+
+    function onSearchClick() {
+    const teacherName = document.getElementById('search-input').value.trim();
+    if (!teacherName) {
+        alert('請輸入講師名稱');
+        return;
+    }
+
+    fetchTeacherCourses(teacherName);
+    }
+
+    async function fetchTeacherCourses(teacherName) {
+    try {
+        const url = `/api/teachers/${encodeURIComponent(teacherName)}/courses`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+        throw new Error(`Fetch failed with status ${response.status}`);
+        }
+
+        const coursesObj = await response.json();
+        const courses = Object.values(coursesObj);
+        renderCourseTable(courses);
+    } catch (err) {
+        console.error(err);
+        alert('無法取得課程資料');
+    }
+    }
+
+    function renderCourseTable(courses) {
+    const table = document.getElementById('search-table');
+    const tbody = document.getElementById('search-table-body');
+
+    // 清除原有資料
+    clearTableBody(tbody);
+
+    if (courses.length === 0) {
+        alert('查無課程資料');
+        table.style.display = 'none';
+        return;
+    }
+
+    // 插入資料
+        courses.forEach(course => {
+
+            // 表格列
+            const tr = document.createElement('tr');
+            const tdValues = [
+            course.course_name,
+            weekdayMap[course.weekday] || course.weekday,
+            formatTime(course.start),
+            formatTime(course.end),
+            course.description,
+            course.location
+            ];
+
+            tdValues.forEach(value => {
+            const td = document.createElement('td');
+            td.textContent = value;
+            tr.appendChild(td);
+            });
+
+            tbody.appendChild(tr);
+        });
+
+    table.style.display = '';
+    }
+
+    function clearTableBody(tbody) {
+    while (tbody.firstChild) {
+        tbody.removeChild(tbody.firstChild);
+    }
+    }
+
+    loadCourses();
+    loadTeachers();
+</script>
+{% endblock %}

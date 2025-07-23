@@ -1,0 +1,259 @@
+{% extends "base.html" %} {% block content %}
+<h1>新增課程</h1>
+<form id="courseForm">
+  <label for="courseName">課程名稱：</label><br>
+  <input type="text" id="coursename" name="coursename" required><br>
+
+  <label for="description">課程簡介：</label><br>
+  <textarea id="description" name="description" rows="4" cols="50" required></textarea><br>
+
+  <label for="weekday">上課星期：</label><br>
+  <select id="weekday" name="weekday" required>
+    <option value="">請選擇</option>
+    <option value="1">星期一</option>
+    <option value="2">星期二</option>
+    <option value="3">星期三</option>
+    <option value="4">星期四</option>
+    <option value="5">星期五</option>
+    <option value="6">星期六</option>
+    <option value="7">星期日</option>
+  </select><br><br>
+
+  <label for="startTime">上課時間（開始，格式：hhmm）：</label><br>
+  <input type="text" id="start" name="start" pattern="\d{4}" placeholder="例如 1300" required><br>
+
+  <label for="endTime">下課時間（結束，格式：hhmm）：</label><br>
+  <input type="text" id="end" name="end" pattern="\d{4}" placeholder="例如 1500" required><br>
+
+  <label for="instructor">授課講師：</label><br>
+  <select id="instructor" name="instructor" required>
+    <option value="">載入中...</option>
+  </select><br><br>
+
+  <label for="location">上課地點：</label><br>
+  <input type="text" id="location" name="location"><br>
+
+  <input type="submit" value="新增課程">
+</form>
+<h1>修改課程</h1>
+<label for="course-selector">選擇課程：</label><br>
+<select id="course-selector"></select><br>
+<form id="patchCourseForm" style="display: none;">
+  <label for="courseName">課程名稱：</label><br>
+  <input type="text" id="patch-coursename" name="coursename" required><br>
+
+  <label for="description">課程簡介：</label><br>
+  <textarea id="patch-description" name="description" rows="4" cols="50" required></textarea><br>
+
+  <label for="weekday">上課星期：</label><br>
+  <select id="patch-weekday" name="weekday" required>
+    <option value="">請選擇</option>
+    <option value="1">星期一</option>
+    <option value="2">星期二</option>
+    <option value="3">星期三</option>
+    <option value="4">星期四</option>
+    <option value="5">星期五</option>
+    <option value="6">星期六</option>
+    <option value="7">星期日</option>
+  </select><br><br>
+
+  <label for="startTime">上課時間（開始，格式：hhmm）：</label><br>
+  <input type="text" id="patch-start" name="start" pattern="\d{4}" placeholder="例如 1300" required><br>
+
+  <label for="endTime">下課時間（結束，格式：hhmm）：</label><br>
+  <input type="text" id="patch-end" name="end" pattern="\d{4}" placeholder="例如 1500" required><br>
+
+  <label for="instructor">授課講師：</label><br>
+  <select id="patch-instructor" name="instructor" required>
+    <option value="">載入中...</option>
+  </select><br><br>
+  <input type="text" id="patch-instructor-origin" name="instructor_origin" style="display: none;"><br>
+
+  <label for="location">上課地點：</label><br>
+  <input type="text" id="patch-location" name="location"><br>
+
+  <input type="submit" value="修改課程">
+</form>
+
+<h1>刪除課程</h1>
+<label for="delete-course-selector">選擇課程：</label><br>
+<select id="delete-course-selector"></select><br>
+<form id="deleteCourseForm" style="display: none;">
+  <input type="submit" value="刪除課程">
+</form>
+<script>
+// 載入講師資料
+async function loadInstructors() {
+  try {
+    const res = await fetch('/api/teachers'); // 後端提供的講師資料 API
+    const instructorsObj = await res.json();
+    const instructors = Object.entries(instructorsObj);
+    const select = document.getElementById('instructor');
+    const patchSelect = document.getElementById('patch-instructor');
+    while (select.firstChild) {
+      select.removeChild(select.firstChild);
+    }
+    // 加入預設選項
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '請選擇講師';
+    select.appendChild(defaultOption);
+    instructors.forEach(([id, teacher]) => {
+    const option1 = document.createElement('option');
+    option1.value = id;
+    option1.textContent = teacher.teacher_name;
+    select.appendChild(option1);
+
+    const option2 = document.createElement('option');
+    option2.value = id;
+    option2.textContent = teacher.teacher_name;
+    patchSelect.appendChild(option2);
+    });
+  } catch (err) {
+    alert('無法載入講師資料');
+  }
+}
+async function loadCourses() {
+  try{
+    const res = await fetch('/api/courses');
+    const coursesObj = await res.json();
+    const courses = Object.entries(coursesObj);
+    const select = document.getElementById('course-selector');
+    const deleteSelect = document.getElementById('delete-course-selector');
+    while (select.firstChild) {
+      select.removeChild(select.firstChild);
+    }
+    const defaultOption1 = document.createElement('option');
+    defaultOption1.value = '';
+    defaultOption1.textContent = '請選擇課程';
+    const defaultOption2 = document.createElement('option');
+    defaultOption2.value = '';
+    defaultOption2.textContent = '請選擇課程';
+    select.appendChild(defaultOption1);
+    deleteSelect.appendChild(defaultOption2);
+    courses.forEach(([id, course]) => {
+      const option1 = document.createElement('option');
+      option1.value = id;
+      option1.textContent = course.course_name;
+      select.appendChild(option1);
+
+      const option2 = document.createElement('option');
+      option2.value = id;
+      option2.textContent = course.course_name;
+      deleteSelect.appendChild(option2);
+    });
+  } catch (err) {
+    alert('無法載入課程資料');
+  }
+}
+// 表單送出
+document.getElementById('courseForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  const formElement = document.querySelector('#courseForm');
+  const formData = new FormData(formElement);
+
+  try {
+    const res = await fetch('/api/courses', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (res.ok) {
+      alert('新增課程成功！');
+      document.getElementById('courseForm').reset();
+    } else {
+      const errData = await res.json();
+      alert('新增失敗：' + (errData.message || '請稍後再試'));
+    }
+  } catch (err) {
+    alert('傳送失敗：' + err.message);
+  }
+});
+
+document.getElementById('course-selector').addEventListener('change', async function () {
+  const courseId = this.value;
+  if (!courseId) return;
+  const patchCourseForm=document.getElementById("patchCourseForm");
+  patchCourseForm.style.display="block";
+  const res = await fetch(`/api/courses/${courseId}`);
+  const coursesObj = await res.json();
+  const courses = Object.entries(coursesObj);
+  const course =courses[0][1];
+  document.getElementById('patch-coursename').value = course.course_name;
+  document.getElementById('patch-description').value = course.description;
+  document.getElementById('patch-weekday').value = course.weekday;
+  document.getElementById('patch-start').value = course.start;
+  document.getElementById('patch-end').value = course.end;
+  document.getElementById('patch-location').value = course.location;
+  document.getElementById('patch-instructor').value = course.teachers[0].id;
+  document.getElementById('patch-instructor-origin').value = course.teachers[0].id;
+});
+
+document.getElementById('delete-course-selector').addEventListener('change', async function () {
+  const courseId = this.value;
+  if (!courseId) return;
+  const patchCourseForm=document.getElementById("deleteCourseForm");
+  patchCourseForm.style.display="block";
+});
+
+document.getElementById('patchCourseForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  const formElement = document.querySelector('#patchCourseForm');
+  const formData = new FormData(formElement);
+  const courseId =document.getElementById("course-selector").value
+  try {
+    const res = await fetch(`/api/courses/${courseId}`, {
+      method: 'PATCH',
+      body: formData
+    });
+
+    if (res.ok) {
+      alert('修改課程成功！');
+      document.getElementById('courseForm').reset();
+    } else {
+      const errData = await res.json();
+      alert('新增失敗：' + (errData.message || '請稍後再試'));
+    }
+  } catch (err) {
+    alert('傳送失敗：' + err.message);
+  }
+  const patchCourseForm=document.getElementById("patchCourseForm");
+  patchCourseForm.style.display="none";
+  const patchCourseChoose=document.getElementById("course-selector");
+  patchCourseChoose.value='';
+});
+document.getElementById('deleteCourseForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  const formElement = document.querySelector('#deleteCourseForm');
+  const formData = new FormData(formElement);
+  const courseId =document.getElementById("delete-course-selector").value
+  try {
+    const res = await fetch(`/api/courses/${courseId}`, {
+      method: 'DELETE',
+      body: formData
+    });
+
+    if (res.ok) {
+      alert('刪除課程成功！');
+      document.getElementById('courseForm').reset();
+    } else {
+      const errData = await res.json();
+      alert('新增失敗：' + (errData.message || '請稍後再試'));
+    }
+  } catch (err) {
+    alert('傳送失敗：' + err.message);
+  }
+  const patchCourseForm=document.getElementById("patchCourseForm");
+  patchCourseForm.style.display="none";
+  const patchCourseChoose=document.getElementById("course-selector");
+  patchCourseChoose.value='';
+});
+// 初始化講師下拉選單
+loadInstructors();
+// 初始化課程下拉選單
+loadCourses();
+</script>
+{% endblock %}
