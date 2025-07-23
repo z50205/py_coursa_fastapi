@@ -1,0 +1,49 @@
+{% extends "base.html" %} {% block content %}
+<h3>新增用戶</h3>
+<form id="userForm">
+    <label for="username">帳戶：</label><br>
+    <input type="text" id="username" name="username" required><br>
+
+    <label for="password">密碼：</label><br>
+    <input type="password" id="password" name="password" required><br>
+
+    <label for="name">名字：</label><br>
+    <input type="text" id="name" name="name" required><br>
+
+    <label for="email">Email：</label><br>
+    <input type="email" id="email" name="email" required><br>
+
+    <label for="isInstructor">
+        <input type="checkbox" id="is_instructor" name="is_instructor">
+        是否為授課講師
+    </label><br>
+
+    <input type="submit" value="新增帳戶">
+</form>
+
+<script>
+document.getElementById('userForm').addEventListener('submit', async function (e) {
+    e.preventDefault(); // 阻止表單預設提交行為
+
+    const formElement = document.querySelector('#userForm');
+    const formData = new FormData(formElement);
+    try {
+        const response = await fetch('/api/users', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            alert('新增成功！使用者ID：' + result.id);
+            document.getElementById('userForm').reset(); // 清空表單
+        } else {
+            const error = await response.json();
+            alert('錯誤：' + (error.message || '新增失敗'));
+        }
+    } catch (err) {
+        alert('連線錯誤：' + err.message);
+    }
+});
+</script>
+{% endblock %}
